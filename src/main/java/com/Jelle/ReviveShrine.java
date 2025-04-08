@@ -1,0 +1,213 @@
+/*
+ * Plugin: ReviveShrine
+ * Server: Paper 1.20.4 (werkt ook op 1.21.x zodra Paper release ondersteunt)
+ * Features:
+ * - Configureerbare revive prijs
+ * - Revive via kist op ingestelde locatie
+ * - Diamond block visualisatie voor aantal revives
+ * - Commands voor setup
+ * - Automatische doodregistratie
+ * - Persistentie van dode spelers
+ */
+
+package com.Jelle;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+
+public class ReviveShrine extends JavaPlugin implements Listener {
+
+    private Location reviveChestLocation;
+    private Location counterLocation;
+    private int totalRevives = 0;
+    private final Set<UUID> deadPlayers = new HashSet<>();
+    private File dataFile;
+    private FileConfiguration dataConfig;
+
+    @Override
+    public void onEnable() {
+        saveDefaultConfig();
+        loadLocationsFromConfig();
+        loadDeadPlayers();
+        Bukkit.getPluginManager().registerEvents(this, this);
+        getLogger().info("ReviveShrine enabled.");
+    }
+
+    @Override
+    public void onDisable() {
+        saveLocationsToConfig();
+        saveDeadPlayers();
+        getLogger().info("ReviveShrine disabled.");
+    }
+
+    private void loadLocationsFromConfig() {
+        FileConfiguration config = getConfig();
+        if (config.contains("revive-chest")) {
+            reviveChestLocation = (Location) config.get("revive-chest");
+        }
+        if (config.contains("counter-block")) {
+            counterLocation = (Location) config.get("counter-block");
+        }
+        totalRevives = config.getInt("total-revives", 0);
+    }
+
+    private void saveLocationsToConfig() {
+        FileConfiguration config = getConfig();
+        if (reviveChestLocation != null)
+            config.set("revive-chest", reviveChestLocation);
+        if (counterLocation != null)
+            config.set("counter-block", counterLocation);
+        config.set("total-revives", totalRevives);
+        saveConfig();
+    }
+
+    private void loadDeadPlayers() {
+        dataFile = new File(getDataFolder(), "data.yml");
+        if (!dataFile.exists()) {
+            try {
+                if (dataFile.createNewFile()) {
+                    getLogger().info("data.yml succesvol aangemaakt.");
+                }
+            } catch (IOException e) {
+                getLogger().severe("Fout bij laden van data.yml: " + e.getMessage());
+            }
+        }
+        dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+        List<String> list = dataConfig.getStringList("dead-players");
+        for (String uuid : list) {
+            deadPlayers.add(UUID.fromString(uuid));
+        }
+    }
+
+    private void saveDeadPlayers() {
+        List<String> list = new ArrayList<>();
+        for (UUID uuid : deadPlayers) {
+            list.add(uuid.toString());
+        }
+        dataConfig.set("dead-players", list);
+        try {
+            dataConfig.save(dataFile);
+        } catch (IOException e) {
+            getLogger().severe("Fout bij laden opslaan van de spelers: " + e.getMessage());
+        }
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (reviveChestLocation == null) return;
+        Player player = (Player) event.getPlayer();
+        Inventory inv = event.getInventory();
+        Block block = reviveChestLocation.getBlock();
+        if (!(block.getState() instanceof Chest chest)) return;
+        if (!chest.getInventory().equals(inv)) return;
+
+        int required = getConfig().getInt("revive-price.DIAMOND", 64);
+        int count = countItems(inv, Material.DIAMOND);
+
+        if (count >= required) {
+            removeItems(inv, Material.DIAMOND, required);
+            reviveRandomDeadPlayer(player);
+            updateCounterBlock();
+            player.sendMessage("§aRevive uitgevoerd! Een speler is teruggebracht.");
+        }
+    }
+
+    private void reviveRandomDeadPlayer(Player trigger) {
+        if (deadPlayers.isEmpty()) {
+            trigger.sendMessage("§cEr zijn geen dode spelers om te reviven.");
+            return;
+        }
+        UUID revivedId = deadPlayers.iterator().next();
+        deadPlayers.remove(revivedId);
+        Player revived = Bukkit.getPlayer(revivedId);
+        if (revived != null) {
+            revived.setHealth(20.0);
+            revived.setFoodLevel(20);
+            revived.teleport(trigger.getLocation());
+            revived.sendMessage("§aJe bent gerevived door een offer!");
+        }
+        totalRevives++;
+    }
+
+    private void updateCounterBlock() {
+        if (counterLocation == null) return;
+        Location loc = counterLocation.clone().add(0, totalRevives, 0);
+        loc.getBlock().setType(Material.DIAMOND_BLOCK);
+    }
+
+    private int countItems(Inventory inv, Material mat) {
+        int count = 0;
+        for (ItemStack item : inv.getContents()) {
+            if (item != null && item.getType() == mat) {
+                count += item.getAmount();
+            }
+        }
+        return count;
+    }
+
+    private void removeItems(Inventory inv, Material mat, int amount) {
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && item.getType() == mat) {
+                int toRemove = Math.min(item.getAmount(), amount);
+                item.setAmount(item.getAmount() - toRemove);
+                amount -= toRemove;
+                if (amount <= 0) break;
+            }
+        }
+    }
+
+    @Override
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String[] args) {
+        if (!(sender instanceof Player player)) return false;
+        if (cmd.getName().equalsIgnoreCase("setrevivechest")) {
+            reviveChestLocation = player.getLocation().getBlock().getLocation();
+            sender.sendMessage("§aRevive chest locatie ingesteld.");
+            return true;
+        } else if (cmd.getName().equalsIgnoreCase("setrevivecounter")) {
+            counterLocation = player.getLocation().getBlock().getLocation();
+            sender.sendMessage("§aRevive counter locatie ingesteld.");
+            return true;
+        } else if (cmd.getName().equalsIgnoreCase("revivelist")) {
+            sender.sendMessage("§eDode spelers:");
+            for (UUID id : deadPlayers) {
+                OfflinePlayer p = Bukkit.getOfflinePlayer(id);
+                sender.sendMessage("- " + (p.getName() != null ? p.getName() : id.toString()));
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        registerDeath(player.getUniqueId());
+        player.sendMessage("§cJe bent gestorven! Je moet gerevived worden door anderen.");
+    }
+
+    public void registerDeath(UUID playerId) {
+        deadPlayers.add(playerId);
+    }
+}

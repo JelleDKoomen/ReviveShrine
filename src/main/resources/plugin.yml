@@ -1,0 +1,11 @@
+name: ReviveShrine
+main: com.Jelle.ReviveShrine
+version: 1.0
+api-version: 1.20
+commands:
+  setrevivechest:
+    description: Stel de locatie van de revive chest in
+  setrevivecounter:
+    description: Stel de locatie van de counter in
+  revivelist:
+    description: Toon een lijst van dode spelers
