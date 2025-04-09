@@ -123,13 +123,14 @@ public class ReviveShrine extends JavaPlugin implements Listener {
         if (!chest.getInventory().equals(inv)) return;
 
         int required = getConfig().getInt("revive-price.DIAMOND", 64);
-        int count = countItems(inv, Material.DIAMOND);
+        int count = countItems(inv);
 
         if (count >= required) {
-            removeItems(inv, Material.DIAMOND, required);
+            removeItems(inv, required);
             reviveRandomDeadPlayer(player);
             updateCounterBlock();
             player.sendMessage("§aRevive uitgevoerd! Een speler is teruggebracht.");
+            getLogger().info("ReviveShrine succesvol aangemaakt. ");
         }
     }
 
@@ -152,24 +153,31 @@ public class ReviveShrine extends JavaPlugin implements Listener {
 
     private void updateCounterBlock() {
         if (counterLocation == null) return;
-        Location loc = counterLocation.clone().add(0, totalRevives, 0);
-        loc.getBlock().setType(Material.DIAMOND_BLOCK);
+
+        int index = totalRevives - 1;
+        int layer = index / 25;
+        int indexInLayer = index % 25;
+        int xOffset = indexInLayer % 5;
+        int zOffset = indexInLayer / 5;
+
+        Location blockLocation = counterLocation.clone().add(xOffset, layer, zOffset);
+        blockLocation.getBlock().setType(Material.DIAMOND_BLOCK);
     }
 
-    private int countItems(Inventory inv, Material mat) {
+    private int countItems(Inventory inv) {
         int count = 0;
         for (ItemStack item : inv.getContents()) {
-            if (item != null && item.getType() == mat) {
+            if (item != null && item.getType() == Material.DIAMOND) {
                 count += item.getAmount();
             }
         }
         return count;
     }
 
-    private void removeItems(Inventory inv, Material mat, int amount) {
+    private void removeItems(Inventory inv, int amount) {
         for (int i = 0; i < inv.getSize(); i++) {
             ItemStack item = inv.getItem(i);
-            if (item != null && item.getType() == mat) {
+            if (item != null && item.getType() == Material.DIAMOND) {
                 int toRemove = Math.min(item.getAmount(), amount);
                 item.setAmount(item.getAmount() - toRemove);
                 amount -= toRemove;
@@ -184,13 +192,19 @@ public class ReviveShrine extends JavaPlugin implements Listener {
         if (cmd.getName().equalsIgnoreCase("setrevivechest")) {
             reviveChestLocation = player.getLocation().getBlock().getLocation();
             sender.sendMessage("§aRevive chest locatie ingesteld.");
+            getLogger().info("Revive chest locatie ingesteld door " + player.getName() + ": " + reviveChestLocation);
             return true;
         } else if (cmd.getName().equalsIgnoreCase("setrevivecounter")) {
             counterLocation = player.getLocation().getBlock().getLocation();
             sender.sendMessage("§aRevive counter locatie ingesteld.");
+            getLogger().info("Revive counter locatie ingesteld door " + player.getName() + ": " + counterLocation);
             return true;
         } else if (cmd.getName().equalsIgnoreCase("revivelist")) {
             sender.sendMessage("§eDode spelers:");
+            if (deadPlayers.isEmpty()) {
+                sender.sendMessage("§cGeen dode spelers.");
+                return true;
+            }
             for (UUID id : deadPlayers) {
                 OfflinePlayer p = Bukkit.getOfflinePlayer(id);
                 sender.sendMessage("- " + (p.getName() != null ? p.getName() : id.toString()));
