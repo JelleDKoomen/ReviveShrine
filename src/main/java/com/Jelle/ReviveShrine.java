@@ -12,10 +12,7 @@
 
 package com.Jelle;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
@@ -143,6 +140,7 @@ public class ReviveShrine extends JavaPlugin implements Listener {
         deadPlayers.remove(revivedId);
         Player revived = Bukkit.getPlayer(revivedId);
         if (revived != null) {
+            revived.setGameMode(GameMode.SURVIVAL);
             revived.setHealth(20.0);
             revived.setFoodLevel(20);
             revived.teleport(trigger.getLocation());
