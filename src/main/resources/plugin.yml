@@ -1,11 +1,26 @@
 name: ReviveShrine
 main: com.Jelle.ReviveShrine
 version: 1.0
+description: An example plugin
+author: Jelle
+website: https://papermc.io
 api-version: 1.20
 commands:
   setrevivechest:
-    description: Stel de locatie van de revive chest in
+    description: "Set the location of the revive chest"
+    usage: "/setrevivechest"
+    aliases: [setchest, revivechest]
+    permission: revivechest.set
+    permission-message: "You do not have permission to set the revive chest"
   setrevivecounter:
-    description: Stel de locatie van de counter in
+    description: "Set the location of the revive counter"
+    usage: "/setrevivecounter"
+    aliases: [setcounter, revivecounter]
+    permission: revivecounter.set
+    permission-message: "You do not have permission to set the revive counter"
   revivelist:
-    description: Toon een lijst van dode spelers
+    description: "Show a list of dead players"
+    usage: "/revivelist"
+    aliases: [listrevives, deadlist]
+    permission: revivelist.view
+    permission-message: "You do not have permission to view the revive list"
