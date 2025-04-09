@@ -209,6 +209,33 @@ public class ReviveShrine extends JavaPlugin implements Listener {
             }
             return true;
         }
+        if (cmd.getName().equalsIgnoreCase("setrevivecount")) {
+            if (!sender.hasPermission("revivecount.set")) {
+                sender.sendMessage("§cYou do not have permission to set the revive count.");
+                return true;
+            }
+
+            if (args.length != 1) {
+                sender.sendMessage("§cUsage: /setrevivecount <count>");
+                return true;
+            }
+
+            try {
+                int newCount = Integer.parseInt(args[0]);
+                if (newCount < 0) {
+                    sender.sendMessage("§cThe revive count cannot be negative.");
+                    return true;
+                }
+
+                totalRevives = newCount;
+                updateCounterBlock();
+                sender.sendMessage("§aTotal revive count set to " + newCount + " and blocks updated.");
+                getLogger().info("Total revive count set to " + newCount + " by " + player.getName());
+            } catch (NumberFormatException e) {
+                sender.sendMessage("§cInvalid number. Please enter a valid integer.");
+            }
+            return true;
+        }
         return false;
     }
 
