@@ -1,6 +1,6 @@
 # 🪦 ReviveShrine Plugin
 
-Een Paper-plugin voor Minecraft Hardcore-achtige servers waar spelers gerevived kunnen worden in ruil voor een offer. Perfect voor servers met vrienden waar fouten gebeuren, maar je de wereld niet steeds wilt resetten.
+Een Paper-plugin voor Minecraft Hardcore-achtige servers waar spelers gerevived kunnen worden in ruil voor een offer. 
 
 ## 🌍 Server Compatibiliteit
 
