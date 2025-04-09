@@ -187,56 +187,77 @@ public class ReviveShrine extends JavaPlugin implements Listener {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) return false;
-        if (cmd.getName().equalsIgnoreCase("setrevivechest")) {
-            reviveChestLocation = player.getLocation().getBlock().getLocation();
-            sender.sendMessage("§aRevive chest locatie ingesteld.");
-            getLogger().info("Revive chest locatie ingesteld door " + player.getName() + ": " + reviveChestLocation);
-            return true;
-        } else if (cmd.getName().equalsIgnoreCase("setrevivecounter")) {
-            counterLocation = player.getLocation().getBlock().getLocation();
-            sender.sendMessage("§aRevive counter locatie ingesteld.");
-            getLogger().info("Revive counter locatie ingesteld door " + player.getName() + ": " + counterLocation);
-            return true;
-        } else if (cmd.getName().equalsIgnoreCase("revivelist")) {
-            sender.sendMessage("§eDode spelers:");
-            if (deadPlayers.isEmpty()) {
-                sender.sendMessage("§cGeen dode spelers.");
-                return true;
+
+        return switch (cmd.getName().toLowerCase()) {
+            case "setrevivechest" -> {
+                handleSetReviveChest(player);
+                yield true;
             }
-            for (UUID id : deadPlayers) {
-                OfflinePlayer p = Bukkit.getOfflinePlayer(id);
-                sender.sendMessage("- " + (p.getName() != null ? p.getName() : id.toString()));
+            case "setrevivecounter" -> {
+                handleSetReviveCounter(player);
+                yield true;
             }
-            return true;
+            case "revivelist" -> {
+                handleReviveList(sender);
+                yield true;
+            }
+            case "setrevivecount" -> {
+                handleSetReviveCount(sender, args);
+                yield true;
+            }
+            default -> false;
+        };
+    }
+
+    private void handleSetReviveChest(Player player) {
+        reviveChestLocation = player.getLocation().getBlock().getLocation();
+        player.sendMessage("§aRevive chest locatie ingesteld.");
+        getLogger().info("Revive chest locatie ingesteld door " + player.getName() + ": " + reviveChestLocation);
+    }
+
+    private void handleSetReviveCounter(Player player) {
+        counterLocation = player.getLocation().getBlock().getLocation();
+        player.sendMessage("§aRevive counter locatie ingesteld.");
+        getLogger().info("Revive counter locatie ingesteld door " + player.getName() + ": " + counterLocation);
+    }
+
+    private void handleReviveList(CommandSender sender) {
+        sender.sendMessage("§eDode spelers:");
+        if (deadPlayers.isEmpty()) {
+            sender.sendMessage("§cGeen dode spelers.");
+            return;
         }
-        if (cmd.getName().equalsIgnoreCase("setrevivecount")) {
-            if (!sender.hasPermission("revivecount.set")) {
-                sender.sendMessage("§cYou do not have permission to set the revive count.");
-                return true;
-            }
-
-            if (args.length != 1) {
-                sender.sendMessage("§cUsage: /setrevivecount <count>");
-                return true;
-            }
-
-            try {
-                int newCount = Integer.parseInt(args[0]);
-                if (newCount < 0) {
-                    sender.sendMessage("§cThe revive count cannot be negative.");
-                    return true;
-                }
-
-                totalRevives = newCount;
-                updateCounterBlock();
-                sender.sendMessage("§aTotal revive count set to " + newCount + " and blocks updated.");
-                getLogger().info("Total revive count set to " + newCount + " by " + player.getName());
-            } catch (NumberFormatException e) {
-                sender.sendMessage("§cInvalid number. Please enter a valid integer.");
-            }
-            return true;
+        for (UUID id : deadPlayers) {
+            OfflinePlayer p = Bukkit.getOfflinePlayer(id);
+            sender.sendMessage("- " + (p.getName() != null ? p.getName() : id.toString()));
         }
-        return false;
+    }
+
+    private void handleSetReviveCount(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("revivecount.set")) {
+            sender.sendMessage("§cYou do not have permission to set the revive count.");
+            return;
+        }
+
+        if (args.length != 1) {
+            sender.sendMessage("§cUsage: /setrevivecount <count>");
+            return;
+        }
+
+        try {
+            int newCount = Integer.parseInt(args[0]);
+            if (newCount < 0) {
+                sender.sendMessage("§cThe revive count cannot be negative.");
+                return;
+            }
+
+            totalRevives = newCount;
+            updateCounterBlock();
+            sender.sendMessage("§aTotal revive count set to " + newCount + " and blocks updated.");
+            getLogger().info("Total revive count set to " + newCount + " by " + sender.getName());
+        } catch (NumberFormatException e) {
+            sender.sendMessage("§cInvalid number. Please enter a valid integer.");
+        }
     }
 
     @EventHandler
