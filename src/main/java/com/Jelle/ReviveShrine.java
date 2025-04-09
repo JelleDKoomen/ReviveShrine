@@ -146,7 +146,7 @@ public class ReviveShrine extends JavaPlugin implements Listener {
             revived.setHealth(20.0);
             revived.setFoodLevel(20);
             revived.teleport(trigger.getLocation());
-            revived.sendMessage("§aJe bent gerevived door een offer!");
+            revived.sendMessage("§aJe bent revived door een offer!");
         }
         totalRevives++;
     }
